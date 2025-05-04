@@ -1,23 +1,68 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useState } from "react";
 import TokenProvider from "../components/TokenProdvider";
 import InvoiceHeader from "../components/InvoiceHeader";
 import ProductInfo from "../components/ProductInfo";
 import CustomerInfo from "../components/CustomerInfo";
 import SummaryPanel from "../components/SummaryPanel";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function POSPage() {
-  const [invoiceNumber, setInvoiceNumber] = useState("010520250001");
+  const [invoiceNumber, setInvoiceNumber] = useState("INV-010520250001");
   const [barcode, setBarcode] = useState("");
   const [phone, setPhone] = useState("01855271276");
-  const [salesPersons, setSalesPersons] = useState<string[]>([]);
-  const [productData, setProductData] = useState<any[]>([]); // Store product as an array
+  const [membershipId, setMembershipId] = useState("");
+  const [salesPersons, setSalesPersons] = useState<
+    { id: number; name: string }[]
+  >([]);
+  console.log(salesPersons, "salesPersons");
   const [selectedSalesPerson, setSelectedSalesPerson] = useState("");
   const [discount, setDiscount] = useState("");
   const [vat, setVat] = useState("");
 
+  const [summary, setSummary] = useState({
+    mrp: 0,
+    vatAmount: 0,
+    discountAmount: 0,
+    totalItems: 0,
+    totalQuantity: 0,
+    totalPayable: 0,
+    selectedSalesPerson: "",
+    phoneNumber: "",
+    membershipId: "",
+    invoiceNumber: "",
+  });
+
   const token =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NCwibmFtZSI6IkthbXJ1bCIsImVtYWlsIjoiaGVhZG9mZmljZUBnbWFpbC5jb20iLCJhZGRyZXNzIjpudWxsLCJwaG9uZSI6IjAxOTQ1NTE4OTgiLCJyb2xlIjoiTUFOQUdFUiIsImF2YXRhciI6Imh0dHBzOi8vcmVzLmNsb3VkaW5hcnkuY29tL2Ryb3lqaXF3Zi9pbWFnZS91cGxvYWQvdjE2OTY4MDE4MjcvZG93bmxvYWRfZDZzOGJpLmpwZyIsImJyYW5jaCI6MywiYnJhbmNoSW5mbyI6eyJpZCI6MywiYnJhbmNoTmFtZSI6IkhlYWQgT2ZmaWNlIiwiYnJhbmNoTG9jYXRpb24iOiJCYXNodW5kaGFyYSIsImR1ZSI6MCwiYWRkcmVzcyI6IkJhc2h1bmRoYXJhIGNpdHkiLCJwaG9uZSI6IjAxOTQ1NTUxODkyOCIsImhvdGxpbmUiOiIwMTk0NTM2MzU1MiIsImVtYWlsIjoiaGVhZG9mZmljZUBnbWFpbC5jb20iLCJvcGVuSG91cnMiOm51bGwsImNsb3NpbmdIb3VycyI6bnVsbCwiaXNBZGp1c3RtZW50Ijp0cnVlLCJ0eXBlIjoiSGVhZE9mZmljZSJ9LCJpYXQiOjE3NDYwNDE0NzUsImV4cCI6MTc0NzMzNzQ3NX0.PUQfy4Vc2OorR6Yc9JO6lePwiXi20q0MppcIDxGtbsk"; // Replace this with the actual token
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NCwibmFtZSI6IkthbXJ1bCIsImVtYWlsIjoiaGVhZG9mZmljZUBnbWFpbC5jb20iLCJhZGRyZXNzIjpudWxsLCJwaG9uZSI6IjAxOTQ1NTE4OTgiLCJyb2xlIjoiTUFOQUdFUiIsImF2YXRhciI6Imh0dHBzOi8vcmVzLmNsb3VkaW5hcnkuY29tL2Ryb3lqaXF3Zi9pbWFnZS91cGxvYWQvdjE2OTY4MDE4MjcvZG93bmxvYWRfZDZzOGJpLmpwZyIsImJyYW5jaCI6MywiYnJhbmNoSW5mbyI6eyJpZCI6MywiYnJhbmNoTmFtZSI6IkhlYWQgT2ZmaWNlIiwiYnJhbmNoTG9jYXRpb24iOiJCYXNodW5kaGFyYSIsImR1ZSI6MCwiYWRkcmVzcyI6IkJhc2h1bmRoYXJhIGNpdHkiLCJwaG9uZSI6IjAxOTQ1NTUxODkyOCIsImhvdGxpbmUiOiIwMTk0NTM2MzU1MiIsImVtYWlsIjoiaGVhZG9mZmljZUBnbWFpbC5jb20iLCJvcGVuSG91cnMiOm51bGwsImNsb3NpbmdIb3VycyI6bnVsbCwiaXNBZGp1c3RtZW50Ijp0cnVlLCJ0eXBlIjoiSGVhZE9mZmljZSJ9LCJpYXQiOjE3NDYwNDE0NzUsImV4cCI6MTc0NzMzNzQ3NX0.PUQfy4Vc2OorR6Yc9JO6lePwiXi20q0MppcIDxGtbsk"; // shortened for clarity
+
+  // 🔁 Generate invoiceNumber on first load
+  useEffect(() => {
+    const holds = JSON.parse(localStorage.getItem("holdList") || "[]");
+    const lastId = holds?.[holds.length - 1]?.summary?.invoiceNumber;
+    const datePrefix = new Date()
+      .toISOString()
+      .slice(0, 10)
+      .replace(/-/g, "")
+      .slice(0, 6); // YYMMDD
+    let nextId = `${datePrefix}0001`;
+
+    if (lastId && lastId.startsWith(datePrefix)) {
+      const lastCount = parseInt(lastId.slice(6));
+      nextId = `${datePrefix}${(lastCount + 1).toString().padStart(4, "0")}`;
+    }
+
+    setInvoiceNumber(nextId);
+    localStorage.setItem("invoiceNumber", nextId);
+  }, []);
+
+  useEffect(() => {
+    const invoiceId = localStorage.getItem("invoiceId");
+    setInvoiceNumber(invoiceId || invoiceNumber);
+  });
+
+  // 🔄 Load salespersons
 
   useEffect(() => {
     const fetchSalesPersons = async () => {
@@ -25,13 +70,16 @@ export default function POSPage() {
         const res = await fetch(
           "https://front-end-task-lake.vercel.app/api/v1/employee/get-employee-all",
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
         const data = await res.json();
-        setSalesPersons(data?.data?.map((emp: any) => emp.firstName));
+        setSalesPersons(
+          data?.data?.map((emp: any) => ({
+            id: emp.id,
+            name: emp.firstName,
+          }))
+        );
       } catch (error) {
         console.error("Failed to load salespersons:", error);
       }
@@ -40,47 +88,140 @@ export default function POSPage() {
     fetchSalesPersons();
   }, [token]);
 
+  // 📦 Add product via barcode
   useEffect(() => {
-    const fetchProductByBarcode = async () => {
+    const fetchAndStoreProduct = async () => {
       if (!barcode) return;
+
+      // Validate barcode format: 5 digits + hyphen + 5 digits
+      const barcodePattern = /^\d{5}-\d{5}$/;
+      if (!barcodePattern.test(barcode)) {
+        toast.error("Invalid barcode format. Use format: 12345-67890");
+        return;
+      }
+
       try {
         const res = await fetch(
           `https://front-end-task-lake.vercel.app/api/v1/purchase/get-purchase-single?search=${barcode}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
         const data = await res.json();
-        console.log("Product fetched:", data);
+        const product = data?.data;
 
-        // Get current products from localStorage
-        const existingProducts = JSON.parse(
-          localStorage.getItem("products") || "[]"
-        );
+        if (product) {
+          const stored = localStorage.getItem("products");
+          let existing: any[] = [];
 
-        // Check if the product already exists in localStorage
-        const isProductAlreadyAdded = existingProducts.some(
-          (product: any) => product.sku === data?.data?.sku
-        );
-        if (isProductAlreadyAdded) {
-          alert("This product is already added.");
-        } else {
-          // Add the product to localStorage (flat array)
-          existingProducts.push(data?.data);
-          localStorage.setItem("products", JSON.stringify(existingProducts));
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              existing = Array.isArray(parsed) ? parsed : [parsed];
+            } catch {
+              existing = [];
+            }
+          }
 
-          // Update the productData state with the updated array
-          setProductData(existingProducts);
+          const newProducts = Array.isArray(product) ? product : [product];
+          const filtered = newProducts.filter((newItem) => {
+            return !existing.some(
+              (oldItem) =>
+                oldItem.productName === newItem.productName &&
+                oldItem.size === newItem.size &&
+                oldItem.sku === newItem.sku
+            );
+          });
+
+          if (filtered.length > 0) {
+            const updated = [...existing, ...filtered];
+            localStorage.setItem("products", JSON.stringify(updated));
+            window.dispatchEvent(new Event("storageUpdate"));
+          }
         }
-      } catch (error) {
-        console.error("Failed to fetch product:", error);
+      } catch (err) {
+        console.error("Error fetching product by barcode:", err);
       }
     };
 
-    fetchProductByBarcode();
+    fetchAndStoreProduct();
   }, [barcode, token]);
+
+  // ✅ Store values to localStorage and trigger recalculation
+  useEffect(() => {
+    localStorage.setItem("discount", discount || "0");
+    localStorage.setItem("vat", vat || "0");
+    localStorage.setItem("phoneNumber", phone || "");
+    localStorage.setItem("membershipId", membershipId || "");
+    localStorage.setItem("invoiceNumber", invoiceNumber || "");
+    localStorage.setItem("selectedSalesPerson", selectedSalesPerson || "");
+
+    window.dispatchEvent(new Event("storageUpdate"));
+  }, [discount, vat, phone, membershipId, invoiceNumber, selectedSalesPerson]);
+
+  // 🧮 Calculate summary
+  useEffect(() => {
+    const calculateSummary = () => {
+      try {
+        const stored = localStorage.getItem("products");
+        let products: any[] = [];
+
+        if (stored) {
+          try {
+            products = JSON.parse(stored);
+            if (!Array.isArray(products)) products = [];
+          } catch {
+            products = [];
+          }
+        }
+
+        const uniqueProductKeys = new Set(
+          products.map((p) => `${p.productName}_${p.size}`)
+        );
+
+        const totalItems = uniqueProductKeys.size;
+        const totalQuantity = products.reduce(
+          (sum, p) => sum + (p.quantity || 1),
+          0
+        );
+
+        const totalPrice = parseFloat(
+          localStorage.getItem("totalPrice") || "0"
+        );
+        const savedDiscount = localStorage.getItem("discount") || "0";
+        const savedVat = localStorage.getItem("vat") || "0";
+
+        const discountAmount = parseFloat(savedDiscount);
+        const vatPercent = parseFloat(savedVat);
+        const vatAmount = ((totalPrice - discountAmount) * vatPercent) / 100;
+        const totalPayable = totalPrice - discountAmount + vatAmount;
+
+        const newSummary = {
+          mrp: totalPrice,
+          vatAmount,
+          discountAmount,
+          totalItems,
+          totalQuantity,
+          totalPayable,
+          selectedSalesPerson:
+            localStorage.getItem("selectedSalesPerson") || "",
+          phoneNumber: localStorage.getItem("phoneNumber") || "",
+          membershipId: localStorage.getItem("membershipId") || "",
+          invoiceNumber: localStorage.getItem("invoiceNumber") || "",
+        };
+
+        setSummary(newSummary);
+        localStorage.setItem("posSummary", JSON.stringify(newSummary));
+      } catch (error) {
+        console.error("Error calculating summary:", error);
+      }
+    };
+
+    calculateSummary();
+
+    window.addEventListener("storageUpdate", calculateSummary);
+    return () => window.removeEventListener("storageUpdate", calculateSummary);
+  }, []);
 
   return (
     <TokenProvider>
@@ -89,6 +230,8 @@ export default function POSPage() {
           <InvoiceHeader
             invoiceNumber={invoiceNumber}
             barcode={barcode}
+            setMembershipId={setMembershipId}
+            membershipId={membershipId}
             setBarcode={setBarcode}
             phone={phone}
             setPhone={setPhone}
@@ -100,13 +243,22 @@ export default function POSPage() {
             vat={vat}
             setVat={setVat}
           />
-          <ProductInfo productData={productData} />
+          <ProductInfo />
         </div>
         <div className="xl:col-span-1">
           <CustomerInfo />
-          <SummaryPanel />
+          <SummaryPanel
+            mrp={summary.mrp}
+            vatAmount={summary.vatAmount}
+            discountAmount={summary.discountAmount}
+            totalItems={summary.totalItems}
+            totalQuantity={summary.totalQuantity}
+            totalPayable={summary.totalPayable}
+            onRestore={() => window.dispatchEvent(new Event("storageUpdate"))}
+          />
         </div>
       </div>
+      <Toaster position="top-right" reverseOrder={false} />
     </TokenProvider>
   );
 }

@@ -1,11 +1,18 @@
+interface SalesPerson {
+  id: number;
+  name: string;
+}
+
 interface InvoiceHeaderProps {
   invoiceNumber: string;
   barcode: string;
   setBarcode: React.Dispatch<React.SetStateAction<string>>;
   phone: string;
   setPhone: React.Dispatch<React.SetStateAction<string>>;
-  salesPersons: string[];
-  selectedSalesPerson: string;
+  membershipId: string;
+  setMembershipId: React.Dispatch<React.SetStateAction<string>>;
+  salesPersons: SalesPerson[];
+  selectedSalesPerson: string; // This will now store the ID as string
   setSelectedSalesPerson: React.Dispatch<React.SetStateAction<string>>;
   discount: string;
   setDiscount: React.Dispatch<React.SetStateAction<string>>;
@@ -16,6 +23,8 @@ interface InvoiceHeaderProps {
 export default function InvoiceHeader({
   invoiceNumber,
   barcode,
+  setMembershipId,
+  membershipId,
   setBarcode,
   phone,
   setPhone,
@@ -47,6 +56,13 @@ export default function InvoiceHeader({
         />
         <input
           type="text"
+          placeholder="Membership ID"
+          className="input"
+          value={membershipId}
+          onChange={(e) => setMembershipId(e.target.value)}
+        />
+        <input
+          type="text"
           placeholder="Phone"
           className="input"
           value={phone}
@@ -58,9 +74,9 @@ export default function InvoiceHeader({
           onChange={(e) => setSelectedSalesPerson(e.target.value)}
         >
           <option value="">Select Salesperson</option>
-          {salesPersons?.map((salesPerson, index) => (
-            <option key={index} value={salesPerson}>
-              {salesPerson}
+          {salesPersons?.map((salesPerson) => (
+            <option key={salesPerson.id} value={salesPerson.id.toString()}>
+              {salesPerson.name}
             </option>
           ))}
         </select>
